@@ -21,6 +21,11 @@
  *   GET /markets?volumeNum_min=1000&volumeNum_max=10000
  *   GET /events?active=true&featured=true&liquidity_min=5000
  *   GET /events?volume_min=1000&volume_max=10000&order=createdAt&ascending=false
+ * 
+ * Scraper:
+ *   The scraper automatically fetches events from Polymarket's Gamma API at regular
+ *   intervals. It only scrapes events that have not ended yet (filters out events
+ *   where ended === true and closed === true).
  */
 
 import { db as prisma } from "./src/db"
@@ -734,10 +739,11 @@ async function bulkUpsertEvents(events: PolymarketEvent[]): Promise<{ successCou
 // Upsert events to database - fetches and upserts in batches to avoid memory issues
 async function upsertEvents() {
 	try {
-		console.log(`[${new Date().toISOString()}] Starting event scrape...`)
+		console.log(`[${new Date().toISOString()}] Starting event scrape (only non-ended events)...`)
 		const startTime = Date.now()
 
-		const baseQuery = { limit: 200 }
+		// Filter for non-closed events at API level, and filter out ended events after fetching
+		const baseQuery = { limit: 200, closed: false }
 		const limit = 200
 		const CONCURRENCY = 10
 
@@ -747,6 +753,7 @@ async function upsertEvents() {
 		let totalSuccessCount = 0
 		let totalErrorCount = 0
 		let totalFetched = 0
+		let totalFiltered = 0
 
 		while (hasMore) {
 			// Create batch of up to 10 page requests
@@ -775,7 +782,7 @@ async function upsertEvents() {
 			const avgDuration = batchResults.reduce((sum, r) => sum + r.duration, 0) / batchResults.length
 			console.log(`[Batch ${batchNumber}] ✅ Fetched ${totalItems} items in ${batchDuration}ms (parallel efficiency: ${Math.round((avgDuration / batchDuration) * 100)}%)`)
 
-			// Collect all events from this batch
+			// Collect all events from this batch and filter out ended events
 			const batchEvents: PolymarketEvent[] = []
 			let foundEnd = false
 
@@ -784,7 +791,16 @@ async function upsertEvents() {
 					foundEnd = true
 					break
 				}
-				batchEvents.push(...items)
+				
+				// Filter out ended events
+				const nonEndedEvents = items.filter(event => event.ended !== true)
+				const filteredCount = items.length - nonEndedEvents.length
+				if (filteredCount > 0) {
+					totalFiltered += filteredCount
+				}
+				
+				batchEvents.push(...nonEndedEvents)
+				
 				if (items.length < limit) {
 					foundEnd = true
 					break
@@ -792,7 +808,7 @@ async function upsertEvents() {
 			}
 
 			totalFetched += batchEvents.length
-			console.log(`[Batch ${batchNumber}] Processing ${batchEvents.length} events (total fetched: ${totalFetched})...`)
+			console.log(`[Batch ${batchNumber}] Processing ${batchEvents.length} events (${totalFiltered} ended events filtered, total fetched: ${totalFetched})...`)
 
 			// Bulk upsert this batch using raw SQL INSERT ON CONFLICT
 			const upsertStartTime = Date.now()
@@ -814,7 +830,7 @@ async function upsertEvents() {
 
 		const duration = Date.now() - startTime
 		console.log(
-			`[${new Date().toISOString()}] Scrape complete: ${totalSuccessCount} succeeded, ${totalErrorCount} failed, ${totalFetched} total fetched (${duration}ms)`
+			`[${new Date().toISOString()}] Scrape complete: ${totalSuccessCount} succeeded, ${totalErrorCount} failed, ${totalFetched} total fetched, ${totalFiltered} ended events filtered (${duration}ms)`
 		)
 	} catch (error) {
 		console.error(`[${new Date().toISOString()}] Fatal error during scrape:`, error)
