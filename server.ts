@@ -25,7 +25,7 @@
 
 import { db as prisma } from "./src/db"
 import { Prisma } from "./src/generated/client"
-import { getAllEvents } from "./src/polymarket/client"
+import { getEvents } from "./src/polymarket/client"
 import type { PolymarketEvent } from "./src/polymarket/types"
 
 // Parse interval from environment variable (in milliseconds), default to 60000 (1 minute)
@@ -645,42 +645,107 @@ async function parallelProcess<T, R>(
 	return { success: results, errors }
 }
 
-// Upsert events to database
+// Upsert events to database - fetches and upserts in batches to avoid memory issues
 async function upsertEvents() {
 	try {
 		console.log(`[${new Date().toISOString()}] Starting event scrape...`)
 		const startTime = Date.now()
 
-		// Fetch all events from Polymarket API
-		const events = await getAllEvents()
-		console.log(`[${new Date().toISOString()}] Fetched ${events.length} events from API`)
+		const baseQuery = { limit: 200 }
+		const limit = 200
+		const CONCURRENCY = 10
 
-		// Upsert events in parallel (up to 10 at once)
-		const { success, errors } = await parallelProcess(
-			events,
-			async (event) => {
-				const eventData = transformEvent(event)
-				await prisma.event.upsert({
-					where: { id: event.id },
-					update: eventData,
-					create: eventData,
+		let offset = 0
+		let hasMore = true
+		let batchNumber = 0
+		let totalSuccessCount = 0
+		let totalErrorCount = 0
+		let totalFetched = 0
+
+		while (hasMore) {
+			// Create batch of up to 10 page requests
+			const batchOffsets: number[] = []
+			for (let i = 0; i < CONCURRENCY; i++) {
+				batchOffsets.push(offset + i * limit)
+			}
+
+			batchNumber++
+			const batchStartTime = Date.now()
+			console.log(`[Batch ${batchNumber}] Starting parallel fetch of ${batchOffsets.length} pages (offsets: ${batchOffsets[0]}-${batchOffsets[batchOffsets.length - 1]})...`)
+
+			// Fetch batch in parallel (up to 10 concurrent requests)
+			const batchResults = await Promise.all(
+				batchOffsets.map(async (batchOffset, index) => {
+					const fetchStart = Date.now()
+					const pageQuery = { ...baseQuery, offset: batchOffset }
+					const page = await getEvents(pageQuery, {})
+					const fetchDuration = Date.now() - fetchStart
+					return { offset: batchOffset, items: page ?? [], duration: fetchDuration }
 				})
-				return event.id
-			},
-			10
-		)
+			)
 
-		const successCount = success.length
-		const errorCount = errors.length
+			const batchDuration = Date.now() - batchStartTime
+			const totalItems = batchResults.reduce((sum, r) => sum + r.items.length, 0)
+			const avgDuration = batchResults.reduce((sum, r) => sum + r.duration, 0) / batchResults.length
+			console.log(`[Batch ${batchNumber}] ✅ Fetched ${totalItems} items in ${batchDuration}ms (parallel efficiency: ${Math.round((avgDuration / batchDuration) * 100)}%)`)
 
-		// Log errors
-		for (const { item, error } of errors) {
-			console.error(`[${new Date().toISOString()}] Error upserting event ${item.id}:`, error)
+			// Collect all events from this batch
+			const batchEvents: PolymarketEvent[] = []
+			let foundEnd = false
+
+			for (const { items } of batchResults) {
+				if (items.length === 0) {
+					foundEnd = true
+					break
+				}
+				batchEvents.push(...items)
+				if (items.length < limit) {
+					foundEnd = true
+					break
+				}
+			}
+
+			totalFetched += batchEvents.length
+			console.log(`[Batch ${batchNumber}] Processing ${batchEvents.length} events (total fetched: ${totalFetched})...`)
+
+			// Upsert this batch immediately (up to 10 at once)
+			const upsertStartTime = Date.now()
+			const { success, errors } = await parallelProcess(
+				batchEvents,
+				async (event) => {
+					const eventData = transformEvent(event)
+					await prisma.event.upsert({
+						where: { id: event.id },
+						update: eventData,
+						create: eventData,
+					})
+					return event.id
+				},
+				10
+			)
+
+			const upsertDuration = Date.now() - upsertStartTime
+			totalSuccessCount += success.length
+			totalErrorCount += errors.length
+
+			// Log errors
+			for (const { item, error } of errors) {
+				console.error(`[${new Date().toISOString()}] Error upserting event ${item.id}:`, error)
+			}
+
+			console.log(`[Batch ${batchNumber}] ✅ Upserted ${success.length} events in ${upsertDuration}ms (${totalErrorCount} errors so far)`)
+
+			if (foundEnd) {
+				hasMore = false
+			} else {
+				// Move offset forward for next batch
+				offset += batchOffsets.length * limit
+			}
 		}
 
 		const duration = Date.now() - startTime
 		console.log(
-			`[${new Date().toISOString()}] Scrape complete: ${successCount} succeeded, ${errorCount} failed (${duration}ms)`
+			`[${new Date().toISOString()}] Scrape complete: ${totalSuccessCount} succeeded, ${totalErrorCount} failed, ${totalFetched} total fetched (${duration}ms)`
 		)
 	} catch (error) {
 		console.error(`[${new Date().toISOString()}] Fatal error during scrape:`, error)
