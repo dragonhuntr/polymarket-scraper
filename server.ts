@@ -31,7 +31,7 @@
 import { db as prisma } from "./src/db"
 import { Prisma } from "./src/generated/client"
 import { getEvents } from "./src/polymarket/client"
-import type { PolymarketEvent } from "./src/polymarket/types"
+import type { PolymarketEvent, PolymarketMarket } from "./src/polymarket/types"
 
 // Parse interval from environment variable (in milliseconds), default to 60000 (1 minute)
 const INTERVAL_MS = parseInt(Bun.env.SCRAPE_INTERVAL_MS || "60000", 10)
@@ -618,6 +618,148 @@ function transformEvent(event: PolymarketEvent) {
 	}
 }
 
+// Transform PolymarketMarket to Prisma Market format
+function transformMarket(market: PolymarketMarket, eventId: string) {
+	return {
+		id: market.id,
+		question: market.question ?? null,
+		conditionId: market.conditionId,
+		slug: market.slug ?? null,
+		twitterCardImage: market.twitterCardImage ?? null,
+		resolutionSource: market.resolutionSource ?? null,
+		endDate: parseDate(market.endDate),
+		category: market.category ?? null,
+		ammType: market.ammType ?? null,
+		liquidity: market.liquidity ?? null,
+		sponsorName: market.sponsorName ?? null,
+		sponsorImage: market.sponsorImage ?? null,
+		startDate: parseDate(market.startDate),
+		xAxisValue: market.xAxisValue ?? null,
+		yAxisValue: market.yAxisValue ?? null,
+		denominationToken: market.denominationToken ?? null,
+		fee: market.fee ?? null,
+		image: market.image ?? null,
+		icon: market.icon ?? null,
+		lowerBound: market.lowerBound ?? null,
+		upperBound: market.upperBound ?? null,
+		description: market.description ?? null,
+		outcomes: market.outcomes ?? null,
+		outcomePrices: market.outcomePrices ?? null,
+		volume: market.volume ?? null,
+		active: market.active ?? null,
+		marketType: market.marketType ?? null,
+		formatType: market.formatType ?? null,
+		lowerBoundDate: market.lowerBoundDate ?? null,
+		upperBoundDate: market.upperBoundDate ?? null,
+		closed: market.closed ?? null,
+		marketMakerAddress: market.marketMakerAddress,
+		createdBy: market.createdBy ?? null,
+		updatedBy: market.updatedBy ?? null,
+		createdAt: parseDate(market.createdAt),
+		updatedAt: parseDate(market.updatedAt),
+		closedTime: market.closedTime ?? null,
+		wideFormat: market.wideFormat ?? null,
+		new: market.new ?? null,
+		mailchimpTag: market.mailchimpTag ?? null,
+		featured: market.featured ?? null,
+		archived: market.archived ?? null,
+		resolvedBy: market.resolvedBy ?? null,
+		restricted: market.restricted ?? null,
+		marketGroup: market.marketGroup ?? null,
+		groupItemTitle: market.groupItemTitle ?? null,
+		groupItemThreshold: market.groupItemThreshold ?? null,
+		questionID: market.questionID ?? null,
+		umaEndDate: market.umaEndDate ?? null,
+		enableOrderBook: market.enableOrderBook ?? null,
+		orderPriceMinTickSize: market.orderPriceMinTickSize ?? null,
+		orderMinSize: market.orderMinSize ?? null,
+		umaResolutionStatus: market.umaResolutionStatus ?? null,
+		curationOrder: market.curationOrder ?? null,
+		volumeNum: market.volumeNum ?? null,
+		liquidityNum: market.liquidityNum ?? null,
+		endDateIso: market.endDateIso ?? null,
+		startDateIso: market.startDateIso ?? null,
+		umaEndDateIso: market.umaEndDateIso ?? null,
+		hasReviewedDates: market.hasReviewedDates ?? null,
+		readyForCron: market.readyForCron ?? null,
+		commentsEnabled: market.commentsEnabled ?? null,
+		volume24hr: market.volume24hr ?? null,
+		volume1wk: market.volume1wk ?? null,
+		volume1mo: market.volume1mo ?? null,
+		volume1yr: market.volume1yr ?? null,
+		gameStartTime: market.gameStartTime ?? null,
+		secondsDelay: market.secondsDelay ?? null,
+		clobTokenIds: market.clobTokenIds ?? null,
+		disqusThread: market.disqusThread ?? null,
+		shortOutcomes: market.shortOutcomes ?? null,
+		teamAID: market.teamAID ?? null,
+		teamBID: market.teamBID ?? null,
+		umaBond: market.umaBond ?? null,
+		umaReward: market.umaReward ?? null,
+		fpmmLive: market.fpmmLive ?? null,
+		volume24hrAmm: market.volume24hrAmm ?? null,
+		volume1wkAmm: market.volume1wkAmm ?? null,
+		volume1moAmm: market.volume1moAmm ?? null,
+		volume1yrAmm: market.volume1yrAmm ?? null,
+		volume24hrClob: market.volume24hrClob ?? null,
+		volume1wkClob: market.volume1wkClob ?? null,
+		volume1moClob: market.volume1moClob ?? null,
+		volume1yrClob: market.volume1yrClob ?? null,
+		volumeAmm: market.volumeAmm ?? null,
+		volumeClob: market.volumeClob ?? null,
+		liquidityAmm: market.liquidityAmm ?? null,
+		liquidityClob: market.liquidityClob ?? null,
+		makerBaseFee: market.makerBaseFee ?? null,
+		takerBaseFee: market.takerBaseFee ?? null,
+		customLiveness: market.customLiveness ?? null,
+		acceptingOrders: market.acceptingOrders ?? null,
+		notificationsEnabled: market.notificationsEnabled ?? null,
+		score: market.score ?? null,
+		imageOptimized: market.imageOptimized ? JSON.parse(JSON.stringify(market.imageOptimized)) : null,
+		iconOptimized: market.iconOptimized ? JSON.parse(JSON.stringify(market.iconOptimized)) : null,
+		creator: market.creator ?? null,
+		ready: market.ready ?? null,
+		funded: market.funded ?? null,
+		pastSlugs: market.pastSlugs ?? null,
+		readyTimestamp: parseDate(market.readyTimestamp),
+		fundedTimestamp: parseDate(market.fundedTimestamp),
+		acceptingOrdersTimestamp: parseDate(market.acceptingOrdersTimestamp),
+		competitive: market.competitive ?? null,
+		rewardsMinSize: market.rewardsMinSize ?? null,
+		rewardsMaxSpread: market.rewardsMaxSpread ?? null,
+		spread: market.spread ?? null,
+		automaticallyResolved: market.automaticallyResolved ?? null,
+		oneDayPriceChange: market.oneDayPriceChange ?? null,
+		oneHourPriceChange: market.oneHourPriceChange ?? null,
+		oneWeekPriceChange: market.oneWeekPriceChange ?? null,
+		oneMonthPriceChange: market.oneMonthPriceChange ?? null,
+		oneYearPriceChange: market.oneYearPriceChange ?? null,
+		lastTradePrice: market.lastTradePrice ?? null,
+		bestBid: market.bestBid ?? null,
+		bestAsk: market.bestAsk ?? null,
+		automaticallyActive: market.automaticallyActive ?? null,
+		clearBookOnStart: market.clearBookOnStart ?? null,
+		chartColor: market.chartColor ?? null,
+		seriesColor: market.seriesColor ?? null,
+		showGmpSeries: market.showGmpSeries ?? null,
+		showGmpOutcome: market.showGmpOutcome ?? null,
+		manualActivation: market.manualActivation ?? null,
+		negRiskOther: market.negRiskOther ?? null,
+		gameId: market.gameId ?? null,
+		groupItemRange: market.groupItemRange ?? null,
+		sportsMarketType: market.sportsMarketType ?? null,
+		line: market.line ?? null,
+		umaResolutionStatuses: market.umaResolutionStatuses ?? null,
+		pendingDeployment: market.pendingDeployment ?? null,
+		deploying: market.deploying ?? null,
+		deployingTimestamp: parseDate(market.deployingTimestamp),
+		scheduledDeploymentTimestamp: parseDate(market.scheduledDeploymentTimestamp),
+		rfqEnabled: market.rfqEnabled ?? null,
+		eventStartTime: parseDate(market.eventStartTime),
+		eventId,
+	}
+}
+
 // Helper function to process items in parallel with concurrency limit
 async function parallelProcess<T, R>(
 	items: T[],
@@ -740,6 +882,106 @@ async function bulkUpsertEvents(events: PolymarketEvent[]): Promise<{ successCou
 	return { successCount, errorCount }
 }
 
+// Bulk upsert markets using raw SQL INSERT ... ON CONFLICT for performance
+async function bulkUpsertMarkets(markets: Array<{ market: PolymarketMarket; eventId: string }>): Promise<{ successCount: number; errorCount: number }> {
+	const BATCH_SIZE = 400
+
+	const columns = [
+		'id', 'question', 'conditionId', 'slug', 'twitterCardImage',
+		'resolutionSource', 'endDate', 'category', 'ammType', 'liquidity',
+		'sponsorName', 'sponsorImage', 'startDate', 'xAxisValue', 'yAxisValue',
+		'denominationToken', 'fee', 'image', 'icon', 'lowerBound',
+		'upperBound', 'description', 'outcomes', 'outcomePrices', 'volume',
+		'active', 'marketType', 'formatType', 'lowerBoundDate', 'upperBoundDate',
+		'closed', 'marketMakerAddress', 'createdBy', 'updatedBy', 'createdAt',
+		'updatedAt', 'closedTime', 'wideFormat', 'new', 'mailchimpTag',
+		'featured', 'archived', 'resolvedBy', 'restricted', 'marketGroup',
+		'groupItemTitle', 'groupItemThreshold', 'questionID', 'umaEndDate',
+		'enableOrderBook', 'orderPriceMinTickSize', 'orderMinSize',
+		'umaResolutionStatus', 'curationOrder', 'volumeNum', 'liquidityNum',
+		'endDateIso', 'startDateIso', 'umaEndDateIso', 'hasReviewedDates',
+		'readyForCron', 'commentsEnabled', 'volume24hr', 'volume1wk',
+		'volume1mo', 'volume1yr', 'gameStartTime', 'secondsDelay',
+		'clobTokenIds', 'disqusThread', 'shortOutcomes', 'teamAID', 'teamBID',
+		'umaBond', 'umaReward', 'fpmmLive', 'volume24hrAmm', 'volume1wkAmm',
+		'volume1moAmm', 'volume1yrAmm', 'volume24hrClob', 'volume1wkClob',
+		'volume1moClob', 'volume1yrClob', 'volumeAmm', 'volumeClob',
+		'liquidityAmm', 'liquidityClob', 'makerBaseFee', 'takerBaseFee',
+		'customLiveness', 'acceptingOrders', 'notificationsEnabled', 'score',
+		'imageOptimized', 'iconOptimized', 'creator', 'ready', 'funded',
+		'pastSlugs', 'readyTimestamp', 'fundedTimestamp',
+		'acceptingOrdersTimestamp', 'competitive', 'rewardsMinSize',
+		'rewardsMaxSpread', 'spread', 'automaticallyResolved',
+		'oneDayPriceChange', 'oneHourPriceChange', 'oneWeekPriceChange',
+		'oneMonthPriceChange', 'oneYearPriceChange', 'lastTradePrice',
+		'bestBid', 'bestAsk', 'automaticallyActive', 'clearBookOnStart',
+		'chartColor', 'seriesColor', 'showGmpSeries', 'showGmpOutcome',
+		'manualActivation', 'negRiskOther', 'gameId', 'groupItemRange',
+		'sportsMarketType', 'line', 'umaResolutionStatuses',
+		'pendingDeployment', 'deploying', 'deployingTimestamp',
+		'scheduledDeploymentTimestamp', 'rfqEnabled', 'eventStartTime',
+		'eventId',
+	]
+
+	const jsonColumns = new Set(['imageOptimized', 'iconOptimized'])
+
+	const quotedColumns = columns.map(c => `"${c}"`).join(', ')
+	const updateSet = columns
+		.filter(c => c !== 'id')
+		.map(c => `"${c}" = EXCLUDED."${c}"`)
+		.join(', ')
+
+	let successCount = 0
+	let errorCount = 0
+
+	// Deduplicate by id (last occurrence wins)
+	const deduped = [...new Map(markets.map(m => [m.market.id, m])).values()]
+
+	for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
+		const batch = deduped.slice(i, i + BATCH_SIZE)
+		const values: unknown[] = []
+		const rowPlaceholders: string[] = []
+
+		for (const { market, eventId } of batch) {
+			const data = transformMarket(market, eventId)
+			const paramPlaceholders: string[] = []
+
+			for (const col of columns) {
+				let val: unknown = (data as Record<string, unknown>)[col] ?? null
+
+				if (jsonColumns.has(col) && val !== null) {
+					val = JSON.stringify(val)
+				} else if (val instanceof Date) {
+					val = val.toISOString()
+				}
+
+				values.push(val)
+				const idx = values.length
+
+				if (jsonColumns.has(col)) {
+					paramPlaceholders.push(`$${idx}::jsonb`)
+				} else {
+					paramPlaceholders.push(`$${idx}`)
+				}
+			}
+
+			rowPlaceholders.push(`(${paramPlaceholders.join(', ')})`)
+		}
+
+		const sql = `INSERT INTO "markets" (${quotedColumns}) VALUES ${rowPlaceholders.join(', ')} ON CONFLICT ("id") DO UPDATE SET ${updateSet}`
+
+		try {
+			await prisma.$executeRawUnsafe(sql, ...values)
+			successCount += batch.length
+		} catch (error) {
+			console.error(`[${new Date().toISOString()}] Bulk market upsert error for batch at index ${i}:`, error)
+			errorCount += batch.length
+		}
+	}
+
+	return { successCount, errorCount }
+}
+
 // Upsert events to database - fetches and upserts in batches to avoid memory issues
 async function upsertEvents() {
 	try {
@@ -823,6 +1065,23 @@ async function upsertEvents() {
 			totalErrorCount += errorCount
 
 			console.log(`[Batch ${batchNumber}] ✅ Upserted ${successCount} events in ${upsertDuration}ms (${totalErrorCount} errors so far)`)
+
+			// Extract and bulk upsert markets from this batch
+			const batchMarkets: Array<{ market: PolymarketMarket; eventId: string }> = []
+			for (const event of batchEvents) {
+				if (event.markets) {
+					for (const market of event.markets) {
+						batchMarkets.push({ market, eventId: event.id })
+					}
+				}
+			}
+
+			if (batchMarkets.length > 0) {
+				const marketStartTime = Date.now()
+				const marketResult = await bulkUpsertMarkets(batchMarkets)
+				const marketDuration = Date.now() - marketStartTime
+				console.log(`[Batch ${batchNumber}] ✅ Upserted ${marketResult.successCount} markets in ${marketDuration}ms (${marketResult.errorCount} errors)`)
+			}
 
 			if (foundEnd) {
 				hasMore = false
