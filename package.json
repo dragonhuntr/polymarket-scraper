@@ -1,8 +1,12 @@
 {
   "name": "polymarket-scraper",
-  "module": "index.ts",
+  "module": "server.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "start": "bun server.ts",
+    "dev": "bun --hot server.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
@@ -11,6 +15,7 @@
   },
   "dependencies": {
     "@prisma/adapter-ppg": "^7.4.0",
+    "@prisma/client": "^7.4.0",
     "prisma": "^7.4.0"
   }
 }

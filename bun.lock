@@ -5,6 +5,7 @@
       "name": "polymarket-scraper",
       "dependencies": {
         "@prisma/adapter-ppg": "^7.4.0",
+        "@prisma/client": "^7.4.0",
         "prisma": "^7.4.0",
       },
       "devDependencies": {
@@ -35,6 +36,10 @@
     "@mrleebo/prisma-ast": ["@mrleebo/prisma-ast@0.13.1", "", { "dependencies": { "chevrotain": "^10.5.0", "lilconfig": "^2.1.0" } }, "sha512-XyroGQXcHrZdvmrGJvsA9KNeOOgGMg1Vg9OlheUsBOSKznLMDl+YChxbkboRHvtFYJEMRYmlV3uoo/njCw05iw=="],
 
     "@prisma/adapter-ppg": ["@prisma/adapter-ppg@7.4.0", "", { "dependencies": { "@prisma/driver-adapter-utils": "7.4.0", "@prisma/ppg": "^1.0.1", "pg-types": "4.0.2", "postgres-array": "3.0.4" } }, "sha512-1vX5OmQQ1ghB2TJmSN4lXP/TL9a3pXO6z31r/EYCsM/wp2UD3vIsmTD0V1PVQjLCesQSJirjo6aHFBNT1MxHxQ=="],
+
+    "@prisma/client": ["@prisma/client@7.4.0", "", { "dependencies": { "@prisma/client-runtime-utils": "7.4.0" }, "peerDependencies": { "prisma": "*", "typescript": ">=5.4.0" }, "optionalPeers": ["prisma", "typescript"] }, "sha512-Sc+ncr7+ph1hMf1LQfn6UyEXDEamCd5pXMsx8Q3SBH0NGX+zjqs3eaABt9hXwbcK9l7f8UyK8ldxOWA2LyPynQ=="],
+
+    "@prisma/client-runtime-utils": ["@prisma/client-runtime-utils@7.4.0", "", {}, "sha512-jTmWAOBGBSCT8n7SMbpjCpHjELgcDW9GNP/CeK6CeqjUFlEL6dn8Cl81t/NBDjJdXDm85XDJmc+PEQqqQee3xw=="],
 
     "@prisma/config": ["@prisma/config@7.4.0", "", { "dependencies": { "c12": "3.1.0", "deepmerge-ts": "7.1.5", "effect": "3.18.4", "empathic": "2.0.0" } }, "sha512-EnNrZMwZ9+O6UlG+YO9SP3VhVw4zwMahDRzQm3r0DQn9KeU5NwzmaDAY+BzACrgmaU71Id1/0FtWIDdl7xQp9g=="],
 
