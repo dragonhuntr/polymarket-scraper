@@ -1,0 +1,474 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Event {
+  id                           String    @id
+  ticker                       String?
+  slug                         String?   @unique
+  title                        String?
+  subtitle                     String?
+  description                  String?   @db.Text
+  resolutionSource             String?
+  startDate                    DateTime?
+  creationDate                 DateTime?
+  endDate                      DateTime?
+  image                        String?
+  icon                         String?
+  active                       Boolean?
+  closed                       Boolean?
+  archived                     Boolean?
+  new                          Boolean?
+  featured                     Boolean?
+  restricted                   Boolean?
+  liquidity                    Float?
+  volume                       Float?
+  openInterest                 Float?
+  sortBy                       String?
+  category                     String?
+  subcategory                  String?
+  isTemplate                   Boolean?
+  templateVariables            String?   @db.Text
+  publishedAt                  String?
+  createdBy                    String?
+  updatedBy                    String?
+  createdAt                    DateTime?
+  updatedAt                    DateTime?
+  commentsEnabled              Boolean?
+  competitive                  Float?
+  volume24hr                   Float?
+  volume1wk                    Float?
+  volume1mo                    Float?
+  volume1yr                    Float?
+  featuredImage                String?
+  disqusThread                 String?
+  parentEventId                String?
+  parentEvent                  Event?    @relation("EventParent", fields: [parentEventId], references: [id])
+  subEvents                    Event[]   @relation("EventParent")
+  enableOrderBook              Boolean?
+  liquidityAmm                 Float?
+  liquidityClob                Float?
+  negRisk                      Boolean?
+  negRiskMarketID              String?
+  negRiskFeeBips               Int?
+  commentCount                 Int?
+  imageOptimized               Json?
+  iconOptimized                Json?
+  featuredImageOptimized       Json?
+  cyom                         Boolean?
+  closedTime                   DateTime?
+  showAllOutcomes              Boolean?
+  showMarketImages             Boolean?
+  automaticallyResolved        Boolean?
+  enableNegRisk                Boolean?
+  automaticallyActive          Boolean?
+  eventDate                    String?
+  startTime                    DateTime?
+  eventWeek                    Int?
+  seriesSlug                   String?
+  score                        String?
+  elapsed                      String?
+  period                       String?
+  live                         Boolean?
+  ended                        Boolean?
+  finishedTimestamp            DateTime?
+  gmpChartMode                 String?
+  eventCreators                Json?
+  tweetCount                   Int?
+  chats                        Json?
+  featuredOrder                Int?
+  estimateValue                Boolean?
+  cantEstimate                 Boolean?
+  estimatedValue               String?
+  templates                    Json?
+  spreadsMainLine              Float?
+  totalsMainLine               Float?
+  carouselMap                  String?
+  pendingDeployment            Boolean?
+  deploying                    Boolean?
+  deployingTimestamp           DateTime?
+  scheduledDeploymentTimestamp DateTime?
+  gameStatus                   String?
+
+  // Relationships
+  markets          Market[]
+  eventTags        EventTag[]
+  eventCategories  EventCategory[]
+  eventCollections EventCollection[]
+  eventSeries      EventSeries[]
+
+  @@index([slug])
+  @@index([active])
+  @@index([closed])
+  @@index([archived])
+  @@index([featured])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([parentEventId])
+  @@map("events")
+}
+
+model Market {
+  id                           String    @id
+  question                     String?   @db.Text
+  conditionId                  String    @unique
+  slug                         String?   @unique
+  twitterCardImage             String?
+  resolutionSource             String?
+  endDate                      DateTime?
+  category                     String?
+  ammType                      String?
+  liquidity                    String?
+  sponsorName                  String?
+  sponsorImage                 String?
+  startDate                    DateTime?
+  xAxisValue                   String?
+  yAxisValue                   String?
+  denominationToken            String?
+  fee                          String?
+  image                        String?
+  icon                         String?
+  lowerBound                   String?
+  upperBound                   String?
+  description                  String?   @db.Text
+  outcomes                     String?   @db.Text
+  outcomePrices                String?   @db.Text
+  volume                       String?
+  active                       Boolean?
+  marketType                   String?
+  formatType                   String?
+  lowerBoundDate               String?
+  upperBoundDate               String?
+  closed                       Boolean?
+  marketMakerAddress           String
+  createdBy                    Int?
+  updatedBy                    Int?
+  createdAt                    DateTime?
+  updatedAt                    DateTime?
+  closedTime                   String?
+  wideFormat                   Boolean?
+  new                          Boolean?
+  mailchimpTag                 String?
+  featured                     Boolean?
+  archived                     Boolean?
+  resolvedBy                   String?
+  restricted                   Boolean?
+  marketGroup                  Int?
+  groupItemTitle               String?
+  groupItemThreshold           String?
+  questionID                   String?
+  umaEndDate                   String?
+  enableOrderBook              Boolean?
+  orderPriceMinTickSize        Float?
+  orderMinSize                 Float?
+  umaResolutionStatus          String?
+  curationOrder                Int?
+  volumeNum                    Float?
+  liquidityNum                 Float?
+  endDateIso                   String?
+  startDateIso                 String?
+  umaEndDateIso                String?
+  hasReviewedDates             Boolean?
+  readyForCron                 Boolean?
+  commentsEnabled              Boolean?
+  volume24hr                   Float?
+  volume1wk                    Float?
+  volume1mo                    Float?
+  volume1yr                    Float?
+  gameStartTime                String?
+  secondsDelay                 Int?
+  clobTokenIds                 String?   @db.Text
+  disqusThread                 String?
+  shortOutcomes                String?
+  teamAID                      String?
+  teamBID                      String?
+  umaBond                      String?
+  umaReward                    String?
+  fpmmLive                     Boolean?
+  volume24hrAmm                Float?
+  volume1wkAmm                 Float?
+  volume1moAmm                 Float?
+  volume1yrAmm                 Float?
+  volume24hrClob               Float?
+  volume1wkClob                Float?
+  volume1moClob                Float?
+  volume1yrClob                Float?
+  volumeAmm                    Float?
+  volumeClob                   Float?
+  liquidityAmm                 Float?
+  liquidityClob                Float?
+  makerBaseFee                 Int?
+  takerBaseFee                 Int?
+  customLiveness               Int?
+  acceptingOrders              Boolean?
+  notificationsEnabled         Boolean?
+  score                        Int?
+  imageOptimized               Json?
+  iconOptimized                Json?
+  creator                      String?
+  ready                        Boolean?
+  funded                       Boolean?
+  pastSlugs                    String?
+  readyTimestamp               DateTime?
+  fundedTimestamp              DateTime?
+  acceptingOrdersTimestamp     DateTime?
+  competitive                  Float?
+  rewardsMinSize               Float?
+  rewardsMaxSpread             Float?
+  spread                       Float?
+  automaticallyResolved        Boolean?
+  oneDayPriceChange            Float?
+  oneHourPriceChange           Float?
+  oneWeekPriceChange           Float?
+  oneMonthPriceChange          Float?
+  oneYearPriceChange           Float?
+  lastTradePrice               Float?
+  bestBid                      Float?
+  bestAsk                      Float?
+  automaticallyActive          Boolean?
+  clearBookOnStart             Boolean?
+  chartColor                   String?
+  seriesColor                  String?
+  showGmpSeries                Boolean?
+  showGmpOutcome               Boolean?
+  manualActivation             Boolean?
+  negRiskOther                 Boolean?
+  gameId                       String?
+  groupItemRange               String?
+  sportsMarketType             String?
+  line                         Float?
+  umaResolutionStatuses        String?
+  pendingDeployment            Boolean?
+  deploying                    Boolean?
+  deployingTimestamp           DateTime?
+  scheduledDeploymentTimestamp DateTime?
+  rfqEnabled                   Boolean?
+  eventStartTime               DateTime?
+
+  // Relationships
+  eventId          String?
+  event            Event?           @relation(fields: [eventId], references: [id])
+  marketTags       MarketTag[]
+  marketCategories MarketCategory[]
+
+  @@index([conditionId])
+  @@index([slug])
+  @@index([active])
+  @@index([closed])
+  @@index([archived])
+  @@index([featured])
+  @@index([eventId])
+  @@index([marketMakerAddress])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([gameId])
+  @@map("markets")
+}
+
+model Tag {
+  id          String    @id
+  label       String?
+  slug        String?   @unique
+  forceShow   Boolean?
+  publishedAt String?
+  createdBy   Int?
+  updatedBy   Int?
+  createdAt   DateTime?
+  updatedAt   DateTime?
+  forceHide   Boolean?
+  isCarousel  Boolean?
+
+  events  EventTag[]
+  markets MarketTag[]
+
+  @@index([slug])
+  @@map("tags")
+}
+
+model Category {
+  id             String    @id
+  label          String?
+  parentCategory String?
+  slug           String?   @unique
+  publishedAt    String?
+  createdBy      String?
+  updatedBy      String?
+  createdAt      DateTime?
+  updatedAt      DateTime?
+
+  events  EventCategory[]
+  markets MarketCategory[]
+
+  @@index([slug])
+  @@index([parentCategory])
+  @@map("categories")
+}
+
+model Series {
+  id                String    @id
+  ticker            String?
+  slug              String?   @unique
+  title             String?
+  subtitle          String?
+  seriesType        String?
+  recurrence        String?
+  description       String?   @db.Text
+  image             String?
+  icon              String?
+  layout            String?
+  active            Boolean?
+  closed            Boolean?
+  archived          Boolean?
+  new               Boolean?
+  featured          Boolean?
+  restricted        Boolean?
+  isTemplate        Boolean?
+  templateVariables Boolean?
+  publishedAt       String?
+  createdBy         String?
+  updatedBy         String?
+  createdAt         DateTime?
+  updatedAt         DateTime?
+  commentsEnabled   Boolean?
+  competitive       String?
+  volume24hr        Float?
+  volume            Float?
+  liquidity         Float?
+  startDate         DateTime?
+  pythTokenID       String?
+  cgAssetName       String?
+  score             Int?
+  commentCount      Int?
+  chats             Json?
+
+  events EventSeries[]
+
+  @@index([slug])
+  @@index([active])
+  @@index([closed])
+  @@map("series")
+}
+
+model Collection {
+  id                   String    @id
+  ticker               String?
+  slug                 String?   @unique
+  title                String?
+  subtitle             String?
+  collectionType       String?
+  description          String?   @db.Text
+  tags                 String?
+  image                String?
+  icon                 String?
+  headerImage          String?
+  layout               String?
+  active               Boolean?
+  closed               Boolean?
+  archived             Boolean?
+  new                  Boolean?
+  featured             Boolean?
+  restricted           Boolean?
+  isTemplate           Boolean?
+  templateVariables    String?   @db.Text
+  publishedAt          String?
+  createdBy            String?
+  updatedBy            String?
+  createdAt            DateTime?
+  updatedAt            DateTime?
+  commentsEnabled      Boolean?
+  imageOptimized       Json?
+  iconOptimized        Json?
+  headerImageOptimized Json?
+
+  events EventCollection[]
+
+  @@index([slug])
+  @@index([active])
+  @@map("collections")
+}
+
+// Junction tables for many-to-many relationships
+model EventTag {
+  id      String @id @default(uuid())
+  eventId String
+  tagId   String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, tagId])
+  @@index([eventId])
+  @@index([tagId])
+  @@map("event_tags")
+}
+
+model EventCategory {
+  id         String   @id @default(uuid())
+  eventId    String
+  categoryId String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, categoryId])
+  @@index([eventId])
+  @@index([categoryId])
+  @@map("event_categories")
+}
+
+model EventCollection {
+  id           String     @id @default(uuid())
+  eventId      String
+  collectionId String
+  event        Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, collectionId])
+  @@index([eventId])
+  @@index([collectionId])
+  @@map("event_collections")
+}
+
+model EventSeries {
+  id       String @id @default(uuid())
+  eventId  String
+  seriesId String
+  event    Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  series   Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, seriesId])
+  @@index([eventId])
+  @@index([seriesId])
+  @@map("event_series")
+}
+
+model MarketTag {
+  id       String @id @default(uuid())
+  marketId String
+  tagId    String
+  market   Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  tag      Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([marketId, tagId])
+  @@index([marketId])
+  @@index([tagId])
+  @@map("market_tags")
+}
+
+model MarketCategory {
+  id         String   @id @default(uuid())
+  marketId   String
+  categoryId String
+  market     Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([marketId, categoryId])
+  @@index([marketId])
+  @@index([categoryId])
+  @@map("market_categories")
+}

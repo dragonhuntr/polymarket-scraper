@@ -8,5 +8,9 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@prisma/adapter-ppg": "^7.4.0",
+    "prisma": "^7.4.0"
   }
 }
