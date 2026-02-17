@@ -613,6 +613,38 @@ function transformEvent(event: PolymarketEvent) {
 	}
 }
 
+// Helper function to process items in parallel with concurrency limit
+async function parallelProcess<T, R>(
+	items: T[],
+	processor: (item: T) => Promise<R>,
+	concurrency: number = 10
+): Promise<{ success: R[]; errors: Array<{ item: T; error: unknown }> }> {
+	const results: R[] = []
+	const errors: Array<{ item: T; error: unknown }> = []
+	const executing: Promise<void>[] = []
+
+	for (const item of items) {
+		const promise = processor(item)
+			.then((result) => {
+				results.push(result)
+			})
+			.catch((error) => {
+				errors.push({ item, error })
+			})
+			.finally(() => {
+				executing.splice(executing.findIndex((p) => p === promise), 1)
+			})
+		executing.push(promise)
+
+		if (executing.length >= concurrency) {
+			await Promise.race(executing)
+		}
+	}
+
+	await Promise.all(executing)
+	return { success: results, errors }
+}
+
 // Upsert events to database
 async function upsertEvents() {
 	try {
@@ -623,23 +655,27 @@ async function upsertEvents() {
 		const events = await getAllEvents()
 		console.log(`[${new Date().toISOString()}] Fetched ${events.length} events from API`)
 
-		// Upsert each event
-		let successCount = 0
-		let errorCount = 0
-
-		for (const event of events) {
-			try {
+		// Upsert events in parallel (up to 10 at once)
+		const { success, errors } = await parallelProcess(
+			events,
+			async (event) => {
 				const eventData = transformEvent(event)
 				await prisma.event.upsert({
 					where: { id: event.id },
 					update: eventData,
 					create: eventData,
 				})
-				successCount++
-			} catch (error) {
-				errorCount++
-				console.error(`[${new Date().toISOString()}] Error upserting event ${event.id}:`, error)
-			}
+				return event.id
+			},
+			10
+		)
+
+		const successCount = success.length
+		const errorCount = errors.length
+
+		// Log errors
+		for (const { item, error } of errors) {
+			console.error(`[${new Date().toISOString()}] Error upserting event ${item.id}:`, error)
 		}
 
 		const duration = Date.now() - startTime

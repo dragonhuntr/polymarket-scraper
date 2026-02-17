@@ -94,32 +94,86 @@ export async function getEvents(
 	return await fetchJson<PolymarketEvent[]>(url, options)
 }
 
+// Helper function to process items in parallel with concurrency limit
+async function parallelProcess<T, R>(
+	items: T[],
+	processor: (item: T) => Promise<R>,
+	concurrency: number = 10
+): Promise<R[]> {
+	const results: R[] = []
+	const executing: Promise<void>[] = []
+
+	for (const item of items) {
+		const promise = processor(item).then((result) => {
+			results.push(result)
+		})
+		executing.push(promise)
+
+		if (executing.length >= concurrency) {
+			await Promise.race(executing)
+			executing.splice(executing.findIndex((p) => p === promise), 1)
+		}
+	}
+
+	await Promise.all(executing)
+	return results
+}
+
 export async function getAllEvents(
 	query: Omit<GetEventsQuery, "offset" | "limit"> & Record<string, HttpQueryValue> = {},
 	options: JsonRequestOptions = {}
 ): Promise<PolymarketEvent[]> {
 	const events: PolymarketEvent[] = []
-	let offset = 0
-	const seen = new Set<string>()
 	const baseQuery: GetEventsQuery & Record<string, HttpQueryValue> = {
 		...query,
 		limit: 200,
 	}
+	const limit = baseQuery.limit ?? 200
 
-	while (true) {
-		const pageQuery = { ...baseQuery, offset }
-		const page = await getEvents(pageQuery, options)
-		const items = page ?? []
-		if (items.length === 0) break
+	// Fetch pages in batches of 10, starting from offset 0
+	let offset = 0
+	let hasMore = true
 
-		events.push(...items)
-		console.log(`polymarket events fetched: ${events.length}`)
+	while (hasMore) {
+		// Create batch of up to 10 page requests
+		const batchOffsets: number[] = []
+		for (let i = 0; i < 10; i++) {
+			batchOffsets.push(offset + i * limit)
+		}
 
-		// Check if we've reached the end or hit a loop
-		if (items.length < (baseQuery.limit ?? items.length)) break
-		if (seen.has(JSON.stringify(pageQuery))) break
-		seen.add(JSON.stringify(pageQuery))
-		offset += items.length
+		// Fetch batch in parallel (up to 10 concurrent requests)
+		const batchResults = await Promise.all(
+			batchOffsets.map(async (batchOffset) => {
+				const pageQuery = { ...baseQuery, offset: batchOffset }
+				const page = await getEvents(pageQuery, options)
+				return { offset: batchOffset, items: page ?? [] }
+			})
+		)
+
+		// Process results in order and stop when we hit an empty page or partial page
+		let foundEnd = false
+		for (const { items } of batchResults) {
+			if (items.length === 0) {
+				foundEnd = true
+				break
+			}
+
+			events.push(...items)
+			console.log(`polymarket events fetched: ${events.length}`)
+
+			// If we got less than limit, this is the last page
+			if (items.length < limit) {
+				foundEnd = true
+				break
+			}
+		}
+
+		if (foundEnd) {
+			hasMore = false
+		} else {
+			// Move offset forward for next batch
+			offset += batchOffsets.length * limit
+		}
 	}
 
 	return events
