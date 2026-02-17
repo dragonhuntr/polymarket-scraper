@@ -691,8 +691,12 @@ async function bulkUpsertEvents(events: PolymarketEvent[]): Promise<{ successCou
 	let successCount = 0
 	let errorCount = 0
 
-	for (let i = 0; i < events.length; i += BATCH_SIZE) {
-		const batch = events.slice(i, i + BATCH_SIZE)
+	// Deduplicate by id (last occurrence wins) to avoid
+	// "ON CONFLICT DO UPDATE command cannot affect row a second time"
+	const deduped = [...new Map(events.map(e => [e.id, e])).values()]
+
+	for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
+		const batch = deduped.slice(i, i + BATCH_SIZE)
 		const values: unknown[] = []
 		const rowPlaceholders: string[] = []
 
