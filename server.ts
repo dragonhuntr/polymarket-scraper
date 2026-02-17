@@ -23,11 +23,10 @@
  *   GET /events?volume_min=1000&volume_max=10000&order=createdAt&ascending=false
  */
 
-import { PrismaClient, Prisma } from "@prisma/client"
+import { db as prisma } from "./src/db"
+import { Prisma } from "./src/generated/client"
 import { getAllEvents } from "./src/polymarket/client"
 import type { PolymarketEvent } from "./src/polymarket/types"
-
-const prisma = new PrismaClient()
 
 // Parse interval from environment variable (in milliseconds), default to 60000 (1 minute)
 const INTERVAL_MS = parseInt(Bun.env.SCRAPE_INTERVAL_MS || "60000", 10)

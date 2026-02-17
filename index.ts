@@ -1,9 +1,6 @@
-import { PrismaClient } from "@prisma/client"
+import { db as prisma } from "./src/db"
 import { getAllEvents } from "./src/polymarket/client"
 import type { PolymarketEvent } from "./src/polymarket/types"
-
-// Initialize Prisma Client
-const prisma = new PrismaClient()
 
 // Parse interval from environment variable (in milliseconds), default to 60000 (1 minute)
 const INTERVAL_MS = parseInt(Bun.env.SCRAPE_INTERVAL_MS || "60000", 10)
