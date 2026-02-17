@@ -685,8 +685,12 @@ process.on("SIGINT", shutdown)
 process.on("SIGTERM", shutdown)
 
 // Main server
+const HOST = Bun.env.HOST || "0.0.0.0"
+const PORT = parseInt(Bun.env.PORT || "3000")
+
 Bun.serve({
-	port: parseInt(Bun.env.PORT || "3000"),
+	hostname: HOST,
+	port: PORT,
 	async fetch(req) {
 		const url = new URL(req.url)
 		const path = url.pathname
@@ -730,7 +734,7 @@ Bun.serve({
 // Start the scraper
 startScraper()
 
-console.log(`🚀 Server running on http://localhost:${Bun.env.PORT || "3000"}`)
+console.log(`🚀 Server running on http://${HOST}:${PORT}`)
 console.log(`📖 Endpoints:`)
 console.log(`   GET /markets - List markets with flexible filtering`)
 console.log(`   GET /events - List events with flexible filtering`)
