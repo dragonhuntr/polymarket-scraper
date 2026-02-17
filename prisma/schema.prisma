@@ -116,8 +116,8 @@ model Event {
 model Market {
   id                           String    @id
   question                     String?   @db.Text
-  conditionId                  String    @unique
-  slug                         String?   @unique
+  conditionId                  String
+  slug                         String?
   twitterCardImage             String?
   resolutionSource             String?
   endDate                      DateTime?
