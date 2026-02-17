@@ -645,6 +645,92 @@ async function parallelProcess<T, R>(
 	return { success: results, errors }
 }
 
+// Bulk upsert events using raw SQL INSERT ... ON CONFLICT for performance
+// Batches of 500 rows (~83 columns each = ~41,500 params, under PostgreSQL's 65,535 limit)
+async function bulkUpsertEvents(events: PolymarketEvent[]): Promise<{ successCount: number; errorCount: number }> {
+	const BATCH_SIZE = 500
+
+	const columns = [
+		'id', 'ticker', 'slug', 'title', 'subtitle', 'description',
+		'resolutionSource', 'startDate', 'creationDate', 'endDate',
+		'image', 'icon', 'active', 'closed', 'archived', 'new',
+		'featured', 'restricted', 'liquidity', 'volume', 'openInterest',
+		'sortBy', 'category', 'subcategory', 'isTemplate', 'templateVariables',
+		'publishedAt', 'createdBy', 'updatedBy', 'createdAt', 'updatedAt',
+		'commentsEnabled', 'competitive', 'volume24hr', 'volume1wk', 'volume1mo',
+		'volume1yr', 'featuredImage', 'disqusThread', 'parentEventId',
+		'enableOrderBook', 'liquidityAmm', 'liquidityClob', 'negRisk',
+		'negRiskMarketID', 'negRiskFeeBips', 'commentCount', 'imageOptimized',
+		'iconOptimized', 'featuredImageOptimized', 'cyom', 'closedTime',
+		'showAllOutcomes', 'showMarketImages', 'automaticallyResolved',
+		'enableNegRisk', 'automaticallyActive', 'eventDate', 'startTime',
+		'eventWeek', 'seriesSlug', 'score', 'elapsed', 'period', 'live',
+		'ended', 'finishedTimestamp', 'gmpChartMode', 'eventCreators',
+		'tweetCount', 'chats', 'featuredOrder', 'estimateValue', 'cantEstimate',
+		'estimatedValue', 'templates', 'spreadsMainLine', 'totalsMainLine',
+		'carouselMap', 'pendingDeployment', 'deploying', 'deployingTimestamp',
+		'scheduledDeploymentTimestamp', 'gameStatus',
+	]
+
+	const jsonColumns = new Set([
+		'imageOptimized', 'iconOptimized', 'featuredImageOptimized',
+		'eventCreators', 'chats', 'templates',
+	])
+
+	const quotedColumns = columns.map(c => `"${c}"`).join(', ')
+	const updateSet = columns
+		.filter(c => c !== 'id')
+		.map(c => `"${c}" = EXCLUDED."${c}"`)
+		.join(', ')
+
+	let successCount = 0
+	let errorCount = 0
+
+	for (let i = 0; i < events.length; i += BATCH_SIZE) {
+		const batch = events.slice(i, i + BATCH_SIZE)
+		const values: unknown[] = []
+		const rowPlaceholders: string[] = []
+
+		for (const event of batch) {
+			const data = transformEvent(event)
+			const paramPlaceholders: string[] = []
+
+			for (const col of columns) {
+				let val: unknown = (data as Record<string, unknown>)[col] ?? null
+
+				if (jsonColumns.has(col) && val !== null) {
+					val = JSON.stringify(val)
+				} else if (val instanceof Date) {
+					val = val.toISOString()
+				}
+
+				values.push(val)
+				const idx = values.length
+
+				if (jsonColumns.has(col)) {
+					paramPlaceholders.push(`$${idx}::jsonb`)
+				} else {
+					paramPlaceholders.push(`$${idx}`)
+				}
+			}
+
+			rowPlaceholders.push(`(${paramPlaceholders.join(', ')})`)
+		}
+
+		const sql = `INSERT INTO "events" (${quotedColumns}) VALUES ${rowPlaceholders.join(', ')} ON CONFLICT ("id") DO UPDATE SET ${updateSet}`
+
+		try {
+			await prisma.$executeRawUnsafe(sql, ...values)
+			successCount += batch.length
+		} catch (error) {
+			console.error(`[${new Date().toISOString()}] Bulk upsert error for batch at index ${i}:`, error)
+			errorCount += batch.length
+		}
+	}
+
+	return { successCount, errorCount }
+}
+
 // Upsert events to database - fetches and upserts in batches to avoid memory issues
 async function upsertEvents() {
 	try {
@@ -708,32 +794,15 @@ async function upsertEvents() {
 			totalFetched += batchEvents.length
 			console.log(`[Batch ${batchNumber}] Processing ${batchEvents.length} events (total fetched: ${totalFetched})...`)
 
-			// Upsert this batch immediately (up to 10 at once)
+			// Bulk upsert this batch using raw SQL INSERT ON CONFLICT
 			const upsertStartTime = Date.now()
-			const { success, errors } = await parallelProcess(
-				batchEvents,
-				async (event) => {
-					const eventData = transformEvent(event)
-					await prisma.event.upsert({
-						where: { id: event.id },
-						update: eventData,
-						create: eventData,
-					})
-					return event.id
-				},
-				10
-			)
+			const { successCount, errorCount } = await bulkUpsertEvents(batchEvents)
 
 			const upsertDuration = Date.now() - upsertStartTime
-			totalSuccessCount += success.length
-			totalErrorCount += errors.length
+			totalSuccessCount += successCount
+			totalErrorCount += errorCount
 
-			// Log errors
-			for (const { item, error } of errors) {
-				console.error(`[${new Date().toISOString()}] Error upserting event ${item.id}:`, error)
-			}
-
-			console.log(`[Batch ${batchNumber}] ✅ Upserted ${success.length} events in ${upsertDuration}ms (${totalErrorCount} errors so far)`)
+			console.log(`[Batch ${batchNumber}] ✅ Upserted ${successCount} events in ${upsertDuration}ms (${totalErrorCount} errors so far)`)
 
 			if (foundEnd) {
 				hasMore = false
