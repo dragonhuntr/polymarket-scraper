@@ -129,26 +129,41 @@ export async function getAllEvents(
 		limit: 200,
 	}
 	const limit = baseQuery.limit ?? 200
+	const CONCURRENCY = 10
 
-	// Fetch pages in batches of 10, starting from offset 0
+	// Fetch pages in batches, starting from offset 0
 	let offset = 0
 	let hasMore = true
+	let batchNumber = 0
 
 	while (hasMore) {
 		// Create batch of up to 10 page requests
 		const batchOffsets: number[] = []
-		for (let i = 0; i < 10; i++) {
+		for (let i = 0; i < CONCURRENCY; i++) {
 			batchOffsets.push(offset + i * limit)
 		}
 
+		batchNumber++
+		const batchStartTime = Date.now()
+		console.log(`[Batch ${batchNumber}] Starting parallel fetch of ${batchOffsets.length} pages (offsets: ${batchOffsets[0]}-${batchOffsets[batchOffsets.length - 1]})...`)
+
 		// Fetch batch in parallel (up to 10 concurrent requests)
 		const batchResults = await Promise.all(
-			batchOffsets.map(async (batchOffset) => {
+			batchOffsets.map(async (batchOffset, index) => {
+				const fetchStart = Date.now()
+				console.log(`  [Request ${index + 1}/${batchOffsets.length}] Starting fetch for offset ${batchOffset}`)
 				const pageQuery = { ...baseQuery, offset: batchOffset }
 				const page = await getEvents(pageQuery, options)
-				return { offset: batchOffset, items: page ?? [] }
+				const fetchDuration = Date.now() - fetchStart
+				console.log(`  [Request ${index + 1}/${batchOffsets.length}] Completed offset ${batchOffset} in ${fetchDuration}ms (${page?.length ?? 0} items)`)
+				return { offset: batchOffset, items: page ?? [], duration: fetchDuration }
 			})
 		)
+
+		const batchDuration = Date.now() - batchStartTime
+		const totalItems = batchResults.reduce((sum, r) => sum + r.items.length, 0)
+		const avgDuration = batchResults.reduce((sum, r) => sum + r.duration, 0) / batchResults.length
+		console.log(`[Batch ${batchNumber}] ✅ All ${batchOffsets.length} requests completed in ${batchDuration}ms (parallel efficiency: ${Math.round((avgDuration / batchDuration) * 100)}%) - fetched ${totalItems} items`)
 
 		// Process results in order and stop when we hit an empty page or partial page
 		let foundEnd = false
